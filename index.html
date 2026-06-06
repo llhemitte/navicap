@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" id="theme-meta" content="#060c14">
+<title>NaviCap</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:manipulation}
+body.night{--bg:#060c14;--panel:#0c1623;--border:#1a3050;--text:#d8eaff;--muted:#3a5a78;--accent:#2a8fff;--red:#ff3322;--green:#22dd55;--amber:#f0c040}
+body.day  {--bg:#dde8f0;--panel:#f0f5f9;--border:#b8ccd8;--text:#0d1f30;--muted:#6080a0;--accent:#1255a0;--red:#cc2211;--green:#118833;--amber:#b07010}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;transition:background .3s,color .3s}
+
+#app{width:100vw;height:100vh;display:flex;flex-direction:column}
+
+/* TOPBAR */
+#topbar{display:flex;align-items:center;justify-content:space-between;padding:5px 12px;flex-shrink:0}
+#gps-info{display:flex;align-items:center;gap:6px}
+#dot{width:10px;height:10px;border-radius:50%;background:var(--amber);flex-shrink:0;transition:background .3s}
+#dot.fix{background:var(--green)}
+#dot.err{background:var(--red)}
+#dot.srch{background:var(--amber);animation:blink 1.1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+#status-txt{font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+#acc-txt{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);margin-left:4px}
+#mode-btn{background:none;border:1.5px solid var(--border);border-radius:20px;padding:4px 13px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:.1em;cursor:pointer;color:var(--text)}
+#mode-btn:active{transform:scale(.94)}
+
+/* PANELS */
+#panels{flex:1;display:flex;padding:4px 8px 8px;gap:8px;min-height:0}
+body.portrait  #panels{flex-direction:column}
+body.landscape #panels{flex-direction:row}
+
+.panel{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  border-radius:14px;
+  border:1.5px solid var(--border);
+  background:var(--panel);
+  padding:4px 2px;
+  min-height:0;
+  min-width:0;
+  overflow:hidden;
+}
+
+.plabel{font-size:11px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:var(--muted);flex-shrink:0}
+
+/* SVG qui remplit tout l'espace disponible */
+.num-svg{display:block;width:100%;flex:1;min-height:0;overflow:visible}
+
+.unit{font-size:clamp(11px,2vmin,18px);font-weight:700;letter-spacing:.18em;color:var(--muted);flex-shrink:0}
+#dir-lbl{font-size:clamp(13px,2.5vmin,24px);font-weight:700;letter-spacing:.15em;color:var(--accent);flex-shrink:0}
+
+/* ERROR */
+#err-overlay{display:none;position:fixed;inset:0;background:rgba(6,10,20,.93);align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:50;padding:30px;text-align:center}
+#err-overlay.show{display:flex}
+#err-msg{font-size:19px;font-weight:700;color:var(--red);letter-spacing:.06em}
+#err-sub{font-size:14px;color:var(--muted);max-width:300px;line-height:1.55}
+#err-btn{margin-top:8px;background:none;border:1.5px solid var(--border);border-radius:20px;padding:8px 22px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body class="night portrait" id="body">
+<div id="app">
+  <div id="topbar">
+    <div id="gps-info">
+      <div id="dot" class="srch"></div>
+      <span id="status-txt">Démarrage…</span>
+      <span id="acc-txt"></span>
+    </div>
+    <button id="mode-btn" onclick="toggleMode()">☀️ JOUR</button>
+  </div>
+
+  <div id="panels">
+    <div class="panel" id="panel-cap">
+      <div class="plabel">CAP</div>
+      <svg class="num-svg" id="svg-cap" preserveAspectRatio="xMidYMid meet">
+        <text id="txt-cap" text-anchor="middle" dominant-baseline="auto"
+          font-family="'Share Tech Mono',monospace"
+          fill="var(--text)">---</text>
+      </svg>
+      <div class="unit">degrés</div>
+      <div id="dir-lbl">—</div>
+    </div>
+
+    <div class="panel" id="panel-vit">
+      <div class="plabel">VITESSE</div>
+      <svg class="num-svg" id="svg-vit" preserveAspectRatio="xMidYMid meet">
+        <text id="txt-vit" text-anchor="middle" dominant-baseline="auto"
+          font-family="'Share Tech Mono',monospace"
+          fill="var(--text)">--</text>
+      </svg>
+      <div class="unit">nœuds</div>
+    </div>
+  </div>
+</div>
+
+<div id="err-overlay">
+  <div style="font-size:48px">📡</div>
+  <div id="err-msg"></div>
+  <div id="err-sub"></div>
+  <button id="err-btn" onclick="document.getElementById('err-overlay').classList.remove('show');startGPS()">Réessayer</button>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const body=$('body');
+
+/* --- Fit SVG text to panel size --- */
+function fitText(svgEl, textEl, str) {
+  textEl.textContent = str;
+  const sw = svgEl.clientWidth  || svgEl.getBoundingClientRect().width;
+  const sh = svgEl.clientHeight || svgEl.getBoundingClientRect().height;
+  if (!sw || !sh) return;
+
+  // Set a large font size, measure, then scale viewBox so text fills
+  const fs = 200;
+  textEl.setAttribute('font-size', fs);
+  svgEl.setAttribute('viewBox', `0 0 ${sw} ${sh}`);
+  textEl.setAttribute('x', sw / 2);
+  textEl.setAttribute('y', sh * 0.88);
+
+  const bb = textEl.getBBox();
+  if (!bb.width || !bb.height) return;
+
+  // Scale font to fill ~96% of width, cap at 94% of height
+  const scaleW = (sw * 0.96) / bb.width;
+  const scaleH = (sh * 0.94) / bb.height;
+  const scale  = Math.min(scaleW, scaleH);
+  textEl.setAttribute('font-size', fs * scale);
+
+  // Re-center vertically after resize
+  const bb2 = textEl.getBBox();
+  textEl.setAttribute('y', (sh + bb2.height) / 2 - bb2.height * 0.12);
+}
+
+let capStr = '---', vitStr = '--';
+
+function redraw() {
+  fitText($('svg-cap'), $('txt-cap'), capStr);
+  fitText($('svg-vit'), $('txt-vit'), vitStr);
+}
+
+/* --- Layout --- */
+function updateLayout() {
+  const land = window.innerWidth > window.innerHeight;
+  body.classList.toggle('landscape', land);
+  body.classList.toggle('portrait',  !land);
+  setTimeout(redraw, 30); // allow CSS to reflow first
+}
+window.addEventListener('resize', updateLayout);
+updateLayout();
+
+/* --- Theme --- */
+let isDay = false;
+function toggleMode() {
+  isDay = !isDay;
+  body.classList.toggle('day',   isDay);
+  body.classList.toggle('night', !isDay);
+  $('mode-btn').textContent = isDay ? '🌙 NUIT' : '☀️ JOUR';
+  $('theme-meta').content   = isDay ? '#dde8f0' : '#060c14';
+}
+
+/* --- Cap --- */
+const DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+function deg2dir(d){return DIRS[Math.round(d/22.5)%16]}
+
+let compassHdg=null, gpsHdg=null;
+function updateCap(){
+  const h = compassHdg!==null ? compassHdg : gpsHdg;
+  if(h!==null){
+    const r=Math.round(h);
+    capStr = String(r).padStart(3,'0')+'°';
+    $('dir-lbl').textContent = deg2dir(r);
+  } else {
+    capStr = '---';
+    $('dir-lbl').textContent = '—';
+  }
+  fitText($('svg-cap'), $('txt-cap'), capStr);
+}
+
+/* --- Compass --- */
+function startCompass(){
+  if(typeof DeviceOrientationEvent!=='undefined'&&
+     typeof DeviceOrientationEvent.requestPermission==='function'){
+    DeviceOrientationEvent.requestPermission().then(s=>{if(s==='granted')listenOri()}).catch(()=>{});
+  } else listenOri();
+}
+function listenOri(){
+  window.addEventListener('deviceorientationabsolute',onOri,true);
+  window.addEventListener('deviceorientation',onOri,true);
+}
+function onOri(e){
+  let h=null;
+  if(e.webkitCompassHeading!=null) h=e.webkitCompassHeading;
+  else if(e.absolute&&e.alpha!=null) h=(360-e.alpha)%360;
+  else if(e.alpha!=null) h=(360-e.alpha)%360;
+  if(h!=null&&!isNaN(h)){compassHdg=h;updateCap();}
+}
+
+/* --- GPS --- */
+let watchId=null;
+function startGPS(){
+  if(!('geolocation' in navigator)){showErr(0);return;}
+  setDot('srch','Recherche GPS…');
+  if(watchId) navigator.geolocation.clearWatch(watchId);
+  watchId=navigator.geolocation.watchPosition(onGPS,onGPSErr,{
+    enableHighAccuracy:true,maximumAge:800,timeout:25000
+  });
+}
+function onGPS(p){
+  $('err-overlay').classList.remove('show');
+  setDot('fix','GPS actif');
+  const{heading,speed,accuracy}=p.coords;
+  if(heading!=null&&!isNaN(heading)&&compassHdg===null) gpsHdg=heading;
+  else if(compassHdg!==null) gpsHdg=null;
+  updateCap();
+  const kn=(speed!=null&&!isNaN(speed))?(speed*1.94384):0;
+  vitStr=kn.toFixed(1);
+  fitText($('svg-vit'),$('txt-vit'),vitStr);
+  if(accuracy) $('acc-txt').textContent='±'+Math.round(accuracy)+'m';
+}
+function onGPSErr(e){showErr(e.code);}
+function showErr(c){
+  const m={
+    0:['GPS non supporté','Ce navigateur ne gère pas la géolocalisation.'],
+    1:['Accès GPS refusé','3 points Chrome → Paramètres du site → Localisation → Autoriser'],
+    2:['Signal GPS absent','Sors à l\'extérieur avec une vue dégagée du ciel.'],
+    3:['Délai GPS dépassé','Réessaie en extérieur.']
+  }[c]||['Erreur GPS','Problème inconnu.'];
+  setDot('err',m[0]);
+  $('err-msg').textContent=m[0];
+  $('err-sub').textContent=m[1];
+  $('err-overlay').classList.add('show');
+}
+function setDot(cls,txt){$('dot').className=cls;$('status-txt').textContent=txt;}
+
+async function keepOn(){
+  if('wakeLock' in navigator){try{await navigator.wakeLock.request('screen');}catch(e){}}
+}
+
+startCompass();
+startGPS();
+keepOn();
+
+// Redraw once fonts are loaded
+document.fonts.ready.then(redraw);
+</script>
+</body>
+</html>
