@@ -1,2 +1,2 @@
-icap
+navicap
 appli cap vitesse
