@@ -2,21 +2,21 @@
   "name": "NaviCap — Cap & Vitesse",
   "short_name": "NaviCap",
   "description": "Affichage GPS cap et vitesse en noeuds",
-  "start_url": "./index.html",
-  "scope": "./",
+  "start_url": "/navicap/index.html",
+  "scope": "/navicap/",
   "display": "fullscreen",
   "orientation": "any",
   "background_color": "#060c14",
   "theme_color": "#060c14",
   "icons": [
     {
-      "src": "./icon-192.png",
+      "src": "/navicap/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "./icon-512.png",
+      "src": "/navicap/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
