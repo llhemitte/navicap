@@ -251,6 +251,14 @@ keepOn();
 
 // Redraw once fonts are loaded
 document.fonts.ready.then(redraw);
+
+// Service Worker pour fonctionnement hors-ligne
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/navicap/sw.js", {scope: "/navicap/"})
+      .catch(e => console.log("SW erreur:", e));
+  });
+}
 </script>
 </body>
 </html>
